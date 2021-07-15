@@ -8,12 +8,24 @@ package edu.utfpr.ct.argumentation.dung.simpledung.gui;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JFileChooser;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import org.tweetyproject.arg.dung.parser.ApxParser;
+import org.tweetyproject.arg.dung.reasoner.AbstractExtensionReasoner;
+import org.tweetyproject.arg.dung.semantics.Extension;
+import org.tweetyproject.arg.dung.syntax.Argument;
+import org.tweetyproject.arg.dung.syntax.Attack;
 import org.tweetyproject.arg.dung.syntax.DungTheory;
+import org.tweetyproject.commons.ParserException;
 
 /**
  *
@@ -29,10 +41,20 @@ public class MainFrame extends javax.swing.JFrame {
     // Ler arquivo de entrada
     private void readInputFile(File input) {
 
-            // [TODO] Ler arquivo de entrada
+        // [TODO] Ler arquivo de entrada
+        ApxParser parser = new ApxParser();
+        try {
+            theory = parser.parseBeliefBase(new FileReader(input));
+            
+            jTextField1.setText(input.getName());
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IOException | ParserException ex) {
+            Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
 
-            // Atualizar a árvore do grafo
-            updateTree();
+        // Atualizar a árvore do grafo
+        updateTree();
     }
 
     // Atualizar árvore de exibição
@@ -45,15 +67,19 @@ public class MainFrame extends javax.swing.JFrame {
         rootNode.add(arguments);
 
         // [TODO] Para cada argumento colocar em 'arguments'
+        for(Argument arg : theory){
+            arguments.add(new DefaultMutableTreeNode(arg.getName()));
+        }
         
-
         // Nó de ataques
         DefaultMutableTreeNode attacks = new DefaultMutableTreeNode("Ataques");
         rootNode.add(attacks);
 
         // [TODO] para cada ataque colocar em 'attacks'
+        for(Attack atk : theory.getAttacks()){
+            attacks.add(new DefaultMutableTreeNode(atk.toString()));
+        }
         
-
         // Atualiza a árvore
         jTree1.setModel(new DefaultTreeModel(rootNode));
 
@@ -67,9 +93,22 @@ public class MainFrame extends javax.swing.JFrame {
         }
 
         // [TODO] Executar o reasoner e obter os modelos (extensões)
-
+        AbstractExtensionReasoner reasoner = ((SemanticEnum)jComboBox1.getSelectedItem()).reasoner;
+        Collection<Extension> models = reasoner.getModels(theory);
+        
         // [TODO] Mostrar a informação em texto
-        String newText = "";
+        String newText = ((SemanticEnum)jComboBox1.getSelectedItem()).name + ":\n";
+        int count = 1;
+        for(Extension ext : models){
+            newText += "Extensão " + count++ + "\n";
+            for(Argument arg : ext){
+                newText += ", " + arg.getName();
+            }
+            
+            newText += ".\n---------------------\n";
+        }
+        
+        newText = newText.replaceAll("\n, ", "\n");
 
         // Atualizar o campo de texto.
         jTextArea1.setText(newText);
